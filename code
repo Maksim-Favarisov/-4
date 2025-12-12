@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# Создаем файл с логами
+cat <<EOL > access.log
+192.168.1.1 - - [28/Jul/2024:12:34:56 +0000] "GET /index.html HTTP/1.1" 200 1234
+192.168.1.2 - - [28/Jul/2024:12:35:56 +0000] "POST /login HTTP/1.1" 200 567
+192.168.1.3 - - [28/Jul/2024:12:36:56 +0000] "GET /home HTTP/1.1" 404 890
+192.168.1.1 - - [28/Jul/2024:12:37:56 +0000] "GET /index.html HTTP/1.1" 200 1234
+192.168.1.4 - - [28/Jul/2024:12:38:56 +0000] "GET /about HTTP/1.1" 200 432
+192.168.1.2 - - [28/Jul/2024:12:39:56 +0000] "GET /index.html HTTP/1.1" 200 1234
+EOL
+
+# Переменные
+LOG_FILE="access.log"
+REPORT_FILE="report.txt"
+
+# Анализ логов
+{
+    echo "Отчет о логе веб-сервера"
+    echo "==========================="
+    echo ""
+    
+    # 1. Общее количество запросов
+    echo "Общее количество запросов: $(awk 'END {print NR}' "$LOG_FILE")"
+    echo ""
+    
+    # 2. Количество уникальных IP-адресов (только awk)
+    echo "Количество уникальных IP-адресов: $(awk '{count[$1]++} END {print length(count)}' "$LOG_FILE")"
+    echo ""
+    
+    # 3. Количество запросов по методам (только awk)
+    echo "Количество запросов по методам:"
+    awk -F'"' '{split($2, a, " "); methods[a[1]]++} 
+        END {for (m in methods) print methods[m], m}' "$LOG_FILE" | sort -k2
+    
+    echo ""
+    
+    # 4. Самый популярный URL (только awk)
+    echo "Самый популярный URL: $(awk -F'"' '{split($2, a, " "); urls[a[2]]++} 
+        END {max=0; url=""; 
+             for (u in urls) if (urls[u] > max) {max=urls[u]; url=u} 
+             print max, url}' "$LOG_FILE")"
+    
+} > "$REPORT_FILE"
+
+echo "Отчет сохранен в файл $REPORT_FILE"
